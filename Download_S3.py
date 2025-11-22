@@ -7,7 +7,8 @@ import geopandas as gpd
 #Read in AOI shapefile
 gdf = gpd.read_file("C:\\Users\\hallerdi\\Documents\\Thesis_Work\\Sentinel_Data\\Sentinel_Tiles\\Sentinel_Tiles.shp")
 bounds = gdf.total_bounds  # minx, miny, maxx, maxy
-wkt = bounds.to_wkt().values.tolist()[0]
+gdf_bounds = gpd.GeoSeries([box(*bounds)], crs=gdf.crs)
+wkt = gdf_bounds.to_wkt().values.tolist()[0]
 
 #Search for Sentinel-1 data in AOI
 results = asf.search(
@@ -25,6 +26,6 @@ session = asf.ASFSession().auth_with_creds("hallerdi", "Exitsign4321!")
 results.download(
     path = ("D:\\Sentinel1_Data"),
     session = session,
-    processes = 10
+    processes = 5
 )
 
