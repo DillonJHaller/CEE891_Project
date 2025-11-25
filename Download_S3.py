@@ -21,11 +21,8 @@ results = asf.search(
 print(f'Total Images Found: {len(results)}')
 metadata = results.geojson()
 
-#Authenticate session and download with EarthData Credentials
-session = asf.ASFSession().auth_with_creds("hallerdi", "Exitsign4321!")
 results.download(
     path = ("D:\\Sentinel1_Data"),
-    session = session,
     processes = 5
 )
 
