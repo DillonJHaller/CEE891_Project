@@ -13,8 +13,8 @@ wkt = gdf_bounds.to_wkt().values.tolist()[0]
 #Search for Sentinel-1 data in AOI
 results = asf.search(
     platform = asf.PLATFORM.SENTINEL1,
-    processingLevel = [asf.PRODUCT_TYPE.SLC],
-    start = date(2015, 1, 1),
+    processingLevel = [asf.PRODUCT_TYPE.GRD_MD],
+    start = date(2024, 1, 1),
     end = date(2024, 12, 31),
     intersectsWith = wkt
 )
