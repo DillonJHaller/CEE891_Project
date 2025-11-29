@@ -13,7 +13,7 @@ wkt = gdf_bounds.to_wkt().values.tolist()[0]
 #Search for Sentinel-1 data in AOI
 results = asf.search(
     platform = asf.PLATFORM.SENTINEL1,
-    processingLevel = [asf.PRODUCT_TYPE.GRD_MD],
+    processingLevel = [asf.PRODUCT_TYPE.GRD_HD],
     start = date(2024, 1, 1),
     end = date(2024, 12, 31),
     intersectsWith = wkt
@@ -23,6 +23,6 @@ metadata = results.geojson()
 
 results.download(
     path = ("D:\\Sentinel1_Data"),
-    processes = 5
+    processes = 10
 )
 
