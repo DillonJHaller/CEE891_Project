@@ -50,6 +50,10 @@ for ltpc in unique_ltpc:
     
     #Calculate mean RVI per date
     mean_rvi_per_date = ltpc_df.groupby('Date')['RVI'].mean()
+
+    #Drop values that have fewer than 5 samples to reduce noise
+    counts_per_date = ltpc_df.groupby('Date')['RVI'].count()
+    mean_rvi_per_date = mean_rvi_per_date[counts_per_date >= 5]
     
     plt.plot(mean_rvi_per_date.index, mean_rvi_per_date.values, marker='o', label=ltpc_dict.get(ltpc, f'LTPC {ltpc}'))
     plt.title(f'RVI Over Time for {ltpc_dict[ltpc]}')
