@@ -11,9 +11,8 @@ import geopandas as gpd
 import pandas as pd
 import os
 from scipy.spatial import cKDTree
-import s0_calibration as s0
 
-def sample_sentinel_data(sentinel_vv_path, sentinel_vh_path, points_shapefile):
+def sample_from_gcp_raster(sentinel_vv_path, sentinel_vh_path, points_shapefile):
     """Sample Sentinel-1 VV and VH data at points from a shapefile.
 
     Parameters
@@ -149,28 +148,113 @@ def sample_sentinel_data(sentinel_vv_path, sentinel_vh_path, points_shapefile):
 
     return df
 
+def sample_from_pcs_raster(sentinel_vv_path, sentinel_vh_path, points_shapefile):
+    """Sample Sentinel-1 VV and VH data at points from a shapefile.
+
+    Parameters
+    ----------
+    sentinel_vv_path : str
+        Path to the Sentinel-1 VV band GeoTIFF.
+    sentinel_vh_path : str
+        Path to the Sentinel-1 VH band GeoTIFF.
+    points_shapefile : str
+        Path to the shapefile containing points to sample.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with sampled VV and VH values at each point.
+    """
+    # Load points from shapefile
+    gdf = gpd.read_file(points_shapefile)
+    print(f"Shapefile CRS: {gdf.crs}")
+    print(f"Sample point: ({gdf.geometry.iloc[0].x}, {gdf.geometry.iloc[0].y})")
+    
+    # Reproject points to raster CRS
+    with rasterio.open(sentinel_vv_path) as vv_src:
+        raster_crs = vv_src.crs
+    gdf = gdf.to_crs(raster_crs)
+    print(f"Reprojected sample point: ({gdf.geometry.iloc[0].x}, {gdf.geometry.iloc[0].y})")
+
+    #Get date from filename
+    date_str = os.path.basename(sentinel_vv_path).split('_')[2]
+    
+    #Prepare a dataframe to hold results
+    results_df = pd.DataFrame()
+    results_df['ID'] = range(len(gdf))
+    results_df['LTPC'] = gdf['LTPC'] #This is the label column
+    results_df['Northing'] = gdf.geometry.y
+    results_df['Easting'] = gdf.geometry.x
+    results_df['Date'] = [date_str] * len(gdf)
+
+    #Sample VV band
+    with rasterio.open(sentinel_vv_path) as vv_src:
+        feature_values = []
+        for point in gdf.geometry:
+            #Append nan if point is outside raster bounds
+            if vv_src.bounds.left <= point.x <= vv_src.bounds.right and vv_src.bounds.bottom <= point.y <= vv_src.bounds.top:
+                try:
+                    sample = vv_src.sample([(point.x, point.y)])
+                    for val in sample:
+                        feature_values.append(val[0])
+                except Exception as e:
+                    print(f"Warning: Could not sample VV at point ({point.x}, {point.y}): {e}")
+                    feature_values.append(np.nan)
+            else:
+                print(f"Point ({point.x}, {point.y}) is outside VV raster bounds.")
+                feature_values.append(np.nan)
+        results_df['VV'] = feature_values
+    
+    #Sample VH band
+    with rasterio.open(sentinel_vh_path) as vh_src:
+        feature_values = []
+        for point in gdf.geometry:
+            if vh_src.bounds.left <= point.x <= vh_src.bounds.right and vh_src.bounds.bottom <= point.y <= vh_src.bounds.top:
+                try:
+                    sample = vh_src.sample([(point.x, point.y)])
+                    for val in sample:
+                        feature_values.append(val[0])
+                except Exception as e:
+                    print(f"Warning: Could not sample VH at point ({point.x}, {point.y}): {e}")
+                    feature_values.append(np.nan)
+            else:
+                print(f"Point ({point.x}, {point.y}) is outside VH raster bounds.")
+                feature_values.append(np.nan)
+        results_df['VH'] = feature_values
+
+    return results_df
+    
+    
+
+
 #Shapefile is from another project
 points_shapefile = "C:\\Users\\hallerdi\\Documents\\Thesis_Work\\cmse802_project\\data\\Train_Test_Points\\training_points.shp"
 #Traverse Sentinel-1 data directories and sample each pair of VV/VH bands
-data_root = "D:\\Sentinel1_Data"
+data_root = "D:\\Sentinel1_Data\\Processed"
 all_samples = []
 for root, dirs, files in os.walk(data_root):
     vv_band_path = None
     vh_band_path = None
 
     for file in files:
-        if file.endswith('001.tiff'):
+        print(file)
+        if file.endswith('VV.tif'):
             vv_band_path = os.path.join(root, file)
-        elif file.endswith('002.tiff'):
+        elif file.endswith('VH.tif'):
             vh_band_path = os.path.join(root, file)
 
     if vv_band_path and vh_band_path:
         print(f"Sampling data from:\nVV: {vv_band_path}\nVH: {vh_band_path}")
-        df_samples = sample_sentinel_data(vv_band_path, vh_band_path, points_shapefile)
+        df_samples = sample_from_pcs_raster(vv_band_path, vh_band_path, points_shapefile)
         all_samples.append(df_samples)
 
 #Combine all samples into a single DataFrame
 final_df = pd.concat(all_samples, ignore_index=True)
+
+#Base values are in dB, convert to linear scale
+final_df['VV'] = 10 ** (final_df['VV'] / 10.0)
+final_df['VH'] = 10 ** (final_df['VH'] / 10.0)
+
 #Calculate RVI and add as new column
 final_df['RVI'] = (4.0 * final_df['VH']) / (final_df['VV'] + final_df['VH'])
 
