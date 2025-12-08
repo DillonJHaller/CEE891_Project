@@ -11,6 +11,7 @@ import geopandas as gpd
 import pandas as pd
 import os
 from scipy.spatial import cKDTree
+import s0_calibration as s0
 
 def sample_sentinel_data(sentinel_vv_path, sentinel_vh_path, points_shapefile):
     """Sample Sentinel-1 VV and VH data at points from a shapefile.

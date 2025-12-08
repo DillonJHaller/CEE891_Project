@@ -15,7 +15,7 @@ results = asf.search(
     platform = asf.PLATFORM.SENTINEL1,
     processingLevel = [asf.PRODUCT_TYPE.GRD_HD],
     start = date(2024, 1, 1),
-    end = date(2024, 6, 30),
+    end = date(2024, 12, 31),
     intersectsWith = wkt
 )
 print(f'Total Images Found: {len(results)}')
@@ -23,6 +23,6 @@ metadata = results.geojson()
 
 results.download(
     path = ("D:\\Sentinel1_Data"),
-    processes = 10
+    processes = 20
 )
 
