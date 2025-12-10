@@ -251,6 +251,9 @@ for root, dirs, files in os.walk(data_root):
 #Combine all samples into a single DataFrame
 final_df = pd.concat(all_samples, ignore_index=True)
 
+#Drop naN values
+final_df = final_df.dropna().reset_index(drop=True)
+
 #Base values are in dB, convert to linear scale
 final_df['VV'] = 10 ** (final_df['VV'] / 10.0)
 final_df['VH'] = 10 ** (final_df['VH'] / 10.0)
