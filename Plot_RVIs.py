@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 data_csv = "data\\sentinel1_samples.csv"
 df = pd.read_csv(data_csv)
 
-#Convert 'Date' column to datetime
-df['Date'] = pd.to_datetime(df['Date'], format='%Y%m%dt%H%M%S')
+#Convert 'Date' column to just date, dropping time
+df['Date'] = pd.to_datetime(df['Date'], format='%Y%m%dt%H%M%S').dt.date
 
 #Get unique dates
 unique_dates = df['Date'].sort_values().unique()
@@ -17,7 +17,7 @@ unique_dates = df['Date'].sort_values().unique()
 unique_ltpc = df['LTPC'].unique()
 
 '''
-    Output LTPC values:
+    Reference LTPC values:
         Constants
             1: Stable pasture/hay
             2: Stable cropland
@@ -42,21 +42,33 @@ ltpc_dict = {
     8: 'Transitioned from NAND to pasture',
     9: 'Transitioned from NAND to crops'
 }
+#LPTCS grouped by end state
+end_states = {
+    (1, 6, 8): 'End State: Pasture/Hay', 
+    (2, 4, 9): 'End State: Cropland', 
+    (3, 5, 7): 'End State: Non-agricultural/non-developed'
+}
 
-#Make one plot per LTPC
-for ltpc in unique_ltpc:
+#Make one plot per end state, with lines for each LTPC in that end state
+for i, es in enumerate(end_states.keys()):
     plt.figure(figsize=(10, 6))
-    ltpc_df = df[df['LTPC'] == ltpc]
     
-    #Calculate mean RVI per date
-    mean_rvi_per_date = ltpc_df.groupby('Date')['RVI'].mean()
+    for ltpc in es:
+        #Filter dataframe for current LTPC
+        ltpc_df = df[df['LTPC'] == ltpc]
+        
+        #Calculate mean RVI per date
+        mean_rvi_per_date = ltpc_df.groupby('Date')['RVI'].mean()
 
-    #Drop values that have fewer than 5 samples to reduce noise
-    counts_per_date = ltpc_df.groupby('Date')['RVI'].count()
-    mean_rvi_per_date = mean_rvi_per_date[counts_per_date >= 5]
+        #Drop values that have fewer than 5 samples to reduce noise
+        counts_per_date = ltpc_df.groupby('Date')['RVI'].count()
+        mean_rvi_per_date = mean_rvi_per_date[counts_per_date >= 5]
     
-    plt.plot(mean_rvi_per_date.index, mean_rvi_per_date.values, marker='o', label=ltpc_dict.get(ltpc, f'LTPC {ltpc}'))
-    plt.title(f'RVI Over Time for {ltpc_dict[ltpc]}')
+        #Plot a moving median with a window of 5 dates to smooth the line
+        mean_rvi_per_date = mean_rvi_per_date.rolling(window=5, center=True).median()
+        plt.plot(mean_rvi_per_date.index, mean_rvi_per_date.values, marker='o', label=ltpc_dict.get(ltpc, f'LTPC {ltpc}'))
+    
+    plt.title(f'RVI Over Time for {end_states[es]}')
     plt.xlabel('Date')
     plt.ylabel('Mean RVI')
     plt.xticks(rotation=45)
@@ -64,7 +76,7 @@ for ltpc in unique_ltpc:
     plt.legend()
     
     #Save plot
-    output_plot_path = f"plots/RVI_LTPC_{ltpc}.png"
+    output_plot_path = f"plots/RVI_es_{i}.png"
     os.makedirs("plots", exist_ok=True)
     plt.savefig(output_plot_path)
     plt.close()
