@@ -70,7 +70,7 @@ for i, es in enumerate(end_states.keys()):
     
     plt.title(f'RVI Over Time for {end_states[es]}')
     plt.xlabel('Date')
-    plt.ylabel('Mean RVI')
+    plt.ylabel('Mean RVI, moving median (window=5)')
     plt.xticks(rotation=45)
     plt.grid()
     plt.legend()
