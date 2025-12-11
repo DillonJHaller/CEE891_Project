@@ -51,7 +51,7 @@ end_states = {
 
 #Make one plot per end state, with lines for each LTPC in that end state
 for i, es in enumerate(end_states.keys()):
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(7, 3), layout='constrained')
     
     for ltpc in es:
         #Filter dataframe for current LTPC
